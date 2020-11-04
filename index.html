@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="en-US">
 
@@ -22,6 +23,9 @@ Answer:
 <textarea id="answer"></textarea>
 <br>
 <div id="div"></div>
+Username:
+<input id="name"></input>
+<div id="notDiv"></div>
 Chat: 
 <input id="chat"></input>
 <br>
@@ -29,7 +33,7 @@ Chat:
 <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
 
 <script>
-  var dataChann, peerConn = new RTCPeerConnection({
+  var dataChann, userName, peerConn = new RTCPeerConnection({
     iceServers: [{
       urls: "stun:stun.l.google.com:19302"
     }]
@@ -102,12 +106,15 @@ Chat:
   
   chat.addEventListener("keydown",function(event){
     if (event.key != "Enter") return;
-    dataChann.send(chat.value);
-    sendMessage(chat.value);
+    dataChann.send(userName + ": " + chat.value);
+    sendMessage(userName + ": " + chat.value);
     chat.value = "";
   });
   function sendMessage(msg){
     div.innerHTML += `<p>${msg}</p>`;
+  }
+  document.querySelector("#name").onkeyup = function() {
+    userName = document.querySelector("#name").value.toString();
   }
 </script>
 
