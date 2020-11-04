@@ -1,0 +1,116 @@
+
+<!DOCTYPE html>
+<html lang="en-US">
+
+<head>
+
+<title>WebRTC Example</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+</head>
+
+<body>
+
+<video id="v1" height="120" width="160" autoplay muted></video>
+<video id="v2" height="120" width="160" autoplay></video>
+<br>
+<button id="button" onclick="createOffer()">Offer:</button>
+<textarea id="offer" placeholder="Paste offer here"></textarea>
+<br>
+Answer: 
+<textarea id="answer"></textarea>
+<br>
+<div id="div"></div>
+Chat: 
+<input id="chat"></input>
+<br>
+
+<script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+
+<script>
+  var dataChann, peerConn = new RTCPeerConnection({
+    iceServers: [{
+      urls: "stun:stun.l.google.com:19302"
+    }]
+  });
+  peerConn.addEventListener("addstream",function(event){
+    v2.srcObject = event.stream;
+  });
+  peerConn.addEventListener("datachannel",function(event){
+    dataChannInit(dataChann = event.channel);
+  });
+  peerConn.addEventListener("iceconnectionstatechange",function(event){
+    sendMessage(peerConn.iceConnectionState);
+  });
+  var requestMedia = navigator.mediaDevices.getUserMedia({
+    video: true,
+    audio: true
+  }).then(stream => peerConn.addStream(v1.srcObject = stream)).catch(sendMessage);
+  function dataChannInit(){
+    dataChann.addEventListener("open",function(){
+      sendMessage("Chat!");
+    });
+    dataChann.addEventListener("message",function(event){
+      sendMessage(event.data);
+    });
+  }
+  function createOffer(){
+    button.disabled = true;
+    dataChannInit(dataChann = peerConn.createDataChannel("chat"));
+    requestMedia.then(function(){
+      peerConn.createOffer();
+    }).then(function(desc){
+      peerConn.setLocalDescription(desc);
+    }).catch(sendMessage);
+    peerConn.addEventListener("icecandidate",function(event){
+      if (event.candidate) return;
+      offer.value = peerConn.localDescription.sdp;
+      offer.select();
+      answer.placeholder = "Paste answer here";
+    });
+  }
+  
+  offer.addEventListener("keydown",function(event){
+    if (event.key != "Enter" || peerConn.signalingState != "stable") return;
+    button.disabled = offer.disabled = true;
+    var desc = new RTCSessionDescription({
+      type: "offer",
+      sdp: offer.value
+    });
+    peerConn.setRemoteDescription(desc).then(function(){
+      peerConn.createAnswer();
+    }).then(function(descr){
+      peerConn.setLocalDescription(descr);
+    }).catch(sendMessage);
+    peerConn.addEventListener("icecandidate",function(event){
+      if (event.candidate) return;
+      answer.focus();
+      answer.value = peerConn.localDescription.sdp;
+      answer.select();
+    });
+  });
+  
+  answer.addEventListener("keydown",function(event){
+    if (event.key != "Enter" || peerConn.signalingState != "have-local-offer") return;
+    answer.disabled = true;
+    peerConn.setRemoteDescription(new RTCSessionDescription({
+      type: "answer",
+      sdp: answer.value
+    })).catch(sendMessage);
+  });
+  
+  chat.addEventListener("keydown",function(event){
+    if (event.key != "Enter") return;
+    dataChann.send(chat.value);
+    sendMessage(chat.value);
+    chat.value = "";
+  });
+  function sendMessage(msg){
+    div.innerHTML += `<p>${msg}</p>`;
+  }
+</script>
+
+</body>
+
+</html>
